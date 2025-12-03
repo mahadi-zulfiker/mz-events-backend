@@ -1,0 +1,17 @@
+-- CreateTable
+CREATE TABLE "Faq" (
+    "id" TEXT NOT NULL,
+    "question" TEXT NOT NULL,
+    "answer" TEXT NOT NULL,
+    "category" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Faq_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "Faq_category_idx" ON "Faq"("category");
+
+-- CreateIndex
+CREATE INDEX "Faq_createdAt_idx" ON "Faq"("createdAt");

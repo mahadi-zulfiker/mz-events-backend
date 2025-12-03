@@ -37,6 +37,18 @@ enum PaymentStatus {
   FAILED
 }
 
+model Faq {
+  id        String   @id @default(uuid())
+  question  String
+  answer    String
+  category  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([createdAt])
+}
+
 model User {
   id              String        @id @default(uuid())
   email           String        @unique

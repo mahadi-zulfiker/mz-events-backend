@@ -26,6 +26,13 @@ const createReview = async (req: Request, res: Response) => {
             });
         }
 
+        if (event.hostId !== hostId) {
+            return res.status(httpStatus.BAD_REQUEST).json({
+                success: false,
+                message: 'Review host mismatch with event',
+            });
+        }
+
         if (event.status !== 'COMPLETED') {
             return res.status(httpStatus.BAD_REQUEST).json({
                 success: false,

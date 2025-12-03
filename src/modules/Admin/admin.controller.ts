@@ -40,14 +40,21 @@ const getUsers = async (req: Request, res: Response) => {
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 20;
         const skip = (page - 1) * limit;
+        const roleQuery = (req.query.role as string | undefined)?.toUpperCase();
+        const allowedRoles = ['USER', 'HOST', 'ADMIN'];
+        const where =
+            roleQuery && allowedRoles.includes(roleQuery)
+                ? { role: roleQuery as any }
+                : undefined;
 
         const [users, total] = await Promise.all([
             prisma.user.findMany({
+                where,
                 skip,
                 take: limit,
                 orderBy: { createdAt: 'desc' },
             }),
-            prisma.user.count(),
+            prisma.user.count({ where }),
         ]);
 
         res.status(httpStatus.OK).json({

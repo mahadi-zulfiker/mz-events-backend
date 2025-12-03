@@ -125,6 +125,9 @@ const getUserEvents = async (req: AuthRequest, res: Response) => {
                 where: { hostId: id },
                 orderBy: { date: 'asc' },
                 include: {
+                    participants: {
+                        select: { paymentStatus: true },
+                    },
                     _count: { select: { participants: true } },
                 },
             }),

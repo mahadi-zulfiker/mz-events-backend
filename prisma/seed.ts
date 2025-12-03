@@ -73,6 +73,26 @@ async function main() {
         ],
     });
 
+    await prisma.faq.createMany({
+        data: [
+            {
+                question: 'How do I become a host?',
+                answer: 'Register with the Host role or upgrade in your profile, then create your first event from the dashboard.',
+                category: 'Hosting',
+            },
+            {
+                question: 'How are payments handled?',
+                answer: 'Payments are processed via Stripe in test mode. You will see a confirmation once the card is authorized.',
+                category: 'Payments',
+            },
+            {
+                question: 'Can I refund a ticket?',
+                answer: 'Reach out to the host to coordinate refunds. Admins can assist for disputes.',
+                category: 'Policies',
+            },
+        ],
+    });
+
     console.log('Seeding complete', { admin: admin.email, host: host.email, user: user.email });
 }
 
