@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  HOST
+  ADMIN
+}
+
+enum EventStatus {
+  OPEN
+  FULL
+  CANCELLED
+  COMPLETED
+}
+
+enum EventCategory {
+  CONCERT
+  SPORTS
+  GAMING
+  FOOD
+  TECH
+  ART
+  TRAVEL
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id              String        @id @default(uuid())
+  email           String        @unique
+  password        String
+  fullName        String
+  profileImage    String?
+  bio             String?
+  interests       String[]
+  location        String?
+  role            Role          @default(USER)
+  isActive        Boolean       @default(true)
+  averageRating   Float?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  hostedEvents    Event[]       @relation("HostedEvents")
+  participants    Participant[]
+  reviews         Review[]      @relation("ReviewsGiven")
+  receivedReviews Review[]      @relation("ReviewsReceived")
+  
+  @@index([email])
+}
+
+model Event {
+  id              String          @id @default(uuid())
+  title           String
+  description     String
+  category        EventCategory
+  date            DateTime
+  time            String
+  location        String
+  address         String
+  minParticipants Int
+  maxParticipants Int
+  joiningFee      Decimal         @default(0)
+  imageUrl        String?
+  status          EventStatus     @default(OPEN)
+  hostId          String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  host            User            @relation("HostedEvents", fields: [hostId], references: [id], onDelete: Cascade)
+  participants    Participant[]
+  reviews         Review[]
+  
+  @@index([hostId])
+  @@index([category])
+  @@index([status])
+  @@index([date])
+}
+
+model Participant {
+  id            String        @id @default(uuid())
+  userId        String
+  eventId       String
+  paymentStatus PaymentStatus @default(PENDING)
+  paymentId     String?
+  joinedAt      DateTime      @default(now())
+  
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event         Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String
+  hostId    String
+  rating    Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+  
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation("ReviewsGiven", fields: [userId], references: [id], onDelete: Cascade)
+  host      User     @relation("ReviewsReceived", fields: [hostId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, eventId])
+  @@index([hostId])
+  @@index([eventId])
+}

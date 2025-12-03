@@ -1,0 +1,20 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AdminRoutes = void 0;
+const express_1 = __importDefault(require("express"));
+const admin_controller_1 = require("./admin.controller");
+const auth_middleware_1 = require("../../middlewares/auth.middleware");
+const role_middleware_1 = require("../../middlewares/role.middleware");
+const router = express_1.default.Router();
+router.use(auth_middleware_1.authMiddleware, (0, role_middleware_1.requireRole)('ADMIN'));
+router.get('/stats', admin_controller_1.AdminController.getStats);
+router.get('/users', admin_controller_1.AdminController.getUsers);
+router.patch('/users/:id', admin_controller_1.AdminController.updateUser);
+router.get('/events', admin_controller_1.AdminController.getEvents);
+router.delete('/events/:id', admin_controller_1.AdminController.deleteEvent);
+router.get('/reviews', admin_controller_1.AdminController.getReviews);
+router.delete('/reviews/:id', admin_controller_1.AdminController.deleteReview);
+exports.AdminRoutes = router;
