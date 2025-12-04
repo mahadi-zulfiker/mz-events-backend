@@ -1,8 +1,11 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/database';
 import httpStatus from 'http-status';
+import { JwtPayload } from '../../utils/jwt.util';
 
-const list = async (req: Request, res: Response) => {
+type AuthRequest = Request & { user?: JwtPayload };
+
+const list = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.userId;
         if (!userId) {
@@ -26,6 +29,54 @@ const list = async (req: Request, res: Response) => {
         res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
             success: false,
             message: error.message || 'Failed to fetch notifications',
+            error,
+        });
+    }
+};
+
+const contact = async (req: AuthRequest, res: Response) => {
+    try {
+        const { name, email, message } = req.body;
+        if (!message || typeof message !== 'string') {
+            return res.status(httpStatus.BAD_REQUEST).json({
+                success: false,
+                message: 'Message is required',
+            });
+        }
+
+        const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
+        if (!admin) {
+            return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: 'No admin available to receive contact message',
+            });
+        }
+
+        const senderName = name || 'Guest';
+        const senderEmail = email || 'N/A';
+
+        await prisma.notification.create({
+            data: {
+                userId: admin.id,
+                title: `Contact form: ${senderName}`,
+                body: message,
+                type: 'GENERAL',
+                data: {
+                    fromName: senderName,
+                    fromEmail: senderEmail,
+                    userId: req.user?.userId,
+                },
+            },
+        });
+
+        res.status(httpStatus.OK).json({
+            success: true,
+            message: 'Message delivered to admin',
+        });
+    } catch (error: any) {
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message || 'Failed to send message',
             error,
         });
     }
@@ -84,6 +135,7 @@ const markAllRead = async (req: Request, res: Response) => {
 
 export const NotificationController = {
     list,
+    contact,
     markRead,
     markAllRead,
 };

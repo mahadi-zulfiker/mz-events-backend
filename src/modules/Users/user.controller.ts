@@ -39,6 +39,11 @@ const getProfile = async (req: AuthRequest, res: Response) => {
             });
         }
 
+        const [followersCount, followingCount] = await Promise.all([
+            prisma.friendship.count({ where: { followingId: id } }),
+            prisma.friendship.count({ where: { followerId: id } }),
+        ]);
+
         res.status(httpStatus.OK).json({
             success: true,
             data: {
@@ -55,6 +60,8 @@ const getProfile = async (req: AuthRequest, res: Response) => {
                 hostedEventsCount: user.hostedEvents.length,
                 joinedEventsCount: user.participants.length,
                 reviews: user.receivedReviews,
+                followersCount,
+                followingCount,
             },
         });
     } catch (error: any) {
