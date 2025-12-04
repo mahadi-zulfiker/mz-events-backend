@@ -18,9 +18,10 @@ export default {
         expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
     },
     bcryptSaltRounds: Number(process.env.BCRYPT_SALT_ROUNDS || 10),
+    // Comma-separated list of allowed origins for CORS
     corsOrigin:
         process.env.CORS_ORIGIN ||
-        'http://localhost:3000,http://127.0.0.1:3000',
+        'https://mz-events-frontend.vercel.app,http://localhost:3000,http://127.0.0.1:3000',
     cloudinary: {
         cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
         apiKey: process.env.CLOUDINARY_API_KEY || '',
