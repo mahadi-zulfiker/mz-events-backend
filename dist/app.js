@@ -4,7 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-require("./types/express");
 const cors_1 = __importDefault(require("cors"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const routes_1 = __importDefault(require("./routes"));
@@ -19,11 +18,23 @@ app.use((req, res, next) => {
     if (req.originalUrl === '/api/payments/webhook') {
         return next();
     }
-    return express_1.default.json()(req, res, next);
+    return express_1.default.json({ limit: '10mb' })(req, res, next);
 });
-app.use(express_1.default.urlencoded({ extended: true }));
+app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
 app.use((0, cookie_parser_1.default)());
-app.use((0, cors_1.default)({ origin: config_1.default.corsOrigin, credentials: true }));
+app.use((0, cors_1.default)({
+    origin: (origin, callback) => {
+        if (!origin)
+            return callback(null, true);
+        const allowed = config_1.default.corsOrigin.split(',').map((o) => o.trim());
+        if (allowed.includes(origin))
+            return callback(null, true);
+        if (config_1.default.corsOrigin === '*')
+            return callback(null, true);
+        return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+}));
 // Application Routes
 app.use('/api', routes_1.default);
 app.get('/', (_req, res) => {

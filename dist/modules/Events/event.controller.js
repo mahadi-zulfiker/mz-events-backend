@@ -36,6 +36,12 @@ const buildFilters = (query) => {
     if (query.date) {
         where.date = new Date(query.date);
     }
+    if (query.startDate || query.endDate) {
+        where.date = {
+            gte: query.startDate ? new Date(query.startDate) : undefined,
+            lte: query.endDate ? new Date(query.endDate) : undefined,
+        };
+    }
     if (query.minFee || query.maxFee) {
         const feeFilter = {};
         if (query.minFee)
@@ -59,7 +65,7 @@ const createEvent = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 message: 'Only hosts or admins can create events',
             });
         }
-        const { title, description, category, date, time, location, address, minParticipants, maxParticipants, joiningFee, imageUrl, } = req.body;
+        const { title, description, category, date, time, location, address, latitude, longitude, minParticipants, maxParticipants, joiningFee, imageUrl, } = req.body;
         const event = yield database_1.default.event.create({
             data: {
                 title,
@@ -69,6 +75,8 @@ const createEvent = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 time,
                 location,
                 address,
+                latitude: latitude !== undefined ? Number(latitude) : null,
+                longitude: longitude !== undefined ? Number(longitude) : null,
                 minParticipants: Number(minParticipants),
                 maxParticipants: Number(maxParticipants),
                 joiningFee: new client_1.Prisma.Decimal(joiningFee || 0),
@@ -106,6 +114,13 @@ const getAllEvents = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         const limit = Number(req.query.limit) || 12;
         const skip = (page - 1) * limit;
         const where = buildFilters(req.query);
+        const sortField = req.query.sort || 'date';
+        const order = req.query.order === 'desc' ? 'desc' : 'asc';
+        const orderBy = sortField === 'popularity'
+            ? { _count: { participants: order } }
+            : sortField === 'price'
+                ? { joiningFee: order }
+                : { date: order };
         const [events, total] = yield Promise.all([
             database_1.default.event.findMany({
                 where,
@@ -124,7 +139,7 @@ const getAllEvents = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                         select: { participants: true },
                     },
                 },
-                orderBy: { date: 'asc' },
+                orderBy,
             }),
             database_1.default.event.count({ where }),
         ]);
@@ -225,7 +240,7 @@ const updateEvent = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 message: 'You can only update your own events',
             });
         }
-        const { title, description, category, date, time, location, address, minParticipants, maxParticipants, joiningFee, imageUrl, status, } = req.body;
+        const { title, description, category, date, time, location, address, minParticipants, maxParticipants, joiningFee, imageUrl, status, latitude, longitude, } = req.body;
         const updatedEvent = yield database_1.default.event.update({
             where: { id },
             data: {
@@ -241,6 +256,8 @@ const updateEvent = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 joiningFee: joiningFee !== undefined ? new client_1.Prisma.Decimal(joiningFee) : undefined,
                 imageUrl,
                 status,
+                latitude: latitude !== undefined ? Number(latitude) : undefined,
+                longitude: longitude !== undefined ? Number(longitude) : undefined,
             },
             include: {
                 host: {
@@ -295,10 +312,72 @@ const deleteEvent = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         });
     }
 });
+const getHostedEvents = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        if (!userId) {
+            return res.status(http_status_1.default.UNAUTHORIZED).json({
+                success: false,
+                message: 'Unauthorized',
+            });
+        }
+        const events = yield database_1.default.event.findMany({
+            where: { hostId: userId },
+            include: { _count: { select: { participants: true } } },
+            orderBy: { date: 'asc' },
+        });
+        res.status(http_status_1.default.OK).json({
+            success: true,
+            data: events,
+        });
+    }
+    catch (error) {
+        res.status(http_status_1.default.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message || 'Failed to fetch hosted events',
+            error,
+        });
+    }
+});
+const getJoinedEvents = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        if (!userId) {
+            return res.status(http_status_1.default.UNAUTHORIZED).json({
+                success: false,
+                message: 'Unauthorized',
+            });
+        }
+        const joined = yield database_1.default.participant.findMany({
+            where: { userId },
+            include: {
+                event: {
+                    include: { _count: { select: { participants: true } } },
+                },
+            },
+            orderBy: { joinedAt: 'desc' },
+        });
+        res.status(http_status_1.default.OK).json({
+            success: true,
+            data: joined.map((j) => j.event),
+        });
+    }
+    catch (error) {
+        res.status(http_status_1.default.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message || 'Failed to fetch joined events',
+            error,
+        });
+    }
+});
 exports.EventController = {
     createEvent,
     getAllEvents,
     getEventById,
     updateEvent,
     deleteEvent,
+    getHostedEvents,
+    getJoinedEvents,
 };

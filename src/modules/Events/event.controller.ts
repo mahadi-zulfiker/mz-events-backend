@@ -29,6 +29,13 @@ const buildFilters = (query: Record<string, any>) => {
         where.date = new Date(query.date as string);
     }
 
+    if (query.startDate || query.endDate) {
+        where.date = {
+            gte: query.startDate ? new Date(query.startDate as string) : undefined,
+            lte: query.endDate ? new Date(query.endDate as string) : undefined,
+        };
+    }
+
     if (query.minFee || query.maxFee) {
         const feeFilter: Prisma.DecimalFilter = {};
         if (query.minFee) feeFilter.gte = Number(query.minFee);
@@ -61,6 +68,8 @@ const createEvent = async (req: Request, res: Response) => {
             time,
             location,
             address,
+            latitude,
+            longitude,
             minParticipants,
             maxParticipants,
             joiningFee,
@@ -76,6 +85,8 @@ const createEvent = async (req: Request, res: Response) => {
                 time,
                 location,
                 address,
+                latitude: latitude !== undefined ? Number(latitude) : null,
+                longitude: longitude !== undefined ? Number(longitude) : null,
                 minParticipants: Number(minParticipants),
                 maxParticipants: Number(maxParticipants),
                 joiningFee: new Prisma.Decimal(joiningFee || 0),
@@ -116,6 +127,15 @@ const getAllEvents = async (req: Request, res: Response) => {
 
         const where = buildFilters(req.query);
 
+        const sortField = (req.query.sort as string) || 'date';
+        const order = (req.query.order as string) === 'desc' ? 'desc' : 'asc';
+        const orderBy: any =
+            sortField === 'popularity'
+                ? { _count: { participants: order } }
+                : sortField === 'price'
+                    ? { joiningFee: order }
+                    : { date: order };
+
         const [events, total] = await Promise.all([
             prisma.event.findMany({
                 where,
@@ -134,7 +154,7 @@ const getAllEvents = async (req: Request, res: Response) => {
                         select: { participants: true },
                     },
                 },
-                orderBy: { date: 'asc' },
+                orderBy,
             }),
             prisma.event.count({ where }),
         ]);
@@ -255,6 +275,8 @@ const updateEvent = async (req: Request, res: Response) => {
             joiningFee,
             imageUrl,
             status,
+            latitude,
+            longitude,
         } = req.body;
 
         const updatedEvent = await prisma.event.update({
@@ -273,6 +295,8 @@ const updateEvent = async (req: Request, res: Response) => {
                     joiningFee !== undefined ? new Prisma.Decimal(joiningFee) : undefined,
                 imageUrl,
                 status,
+                latitude: latitude !== undefined ? Number(latitude) : undefined,
+                longitude: longitude !== undefined ? Number(longitude) : undefined,
             },
             include: {
                 host: {
@@ -332,10 +356,74 @@ const deleteEvent = async (req: Request, res: Response) => {
     }
 };
 
+const getHostedEvents = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return res.status(httpStatus.UNAUTHORIZED).json({
+                success: false,
+                message: 'Unauthorized',
+            });
+        }
+
+        const events = await prisma.event.findMany({
+            where: { hostId: userId },
+            include: { _count: { select: { participants: true } } },
+            orderBy: { date: 'asc' },
+        });
+
+        res.status(httpStatus.OK).json({
+            success: true,
+            data: events,
+        });
+    } catch (error: any) {
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message || 'Failed to fetch hosted events',
+            error,
+        });
+    }
+};
+
+const getJoinedEvents = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return res.status(httpStatus.UNAUTHORIZED).json({
+                success: false,
+                message: 'Unauthorized',
+            });
+        }
+
+        const joined = await prisma.participant.findMany({
+            where: { userId },
+            include: {
+                event: {
+                    include: { _count: { select: { participants: true } } },
+                },
+            },
+            orderBy: { joinedAt: 'desc' },
+        });
+
+        res.status(httpStatus.OK).json({
+            success: true,
+            data: joined.map((j) => j.event),
+        });
+    } catch (error: any) {
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message || 'Failed to fetch joined events',
+            error,
+        });
+    }
+};
+
 export const EventController = {
     createEvent,
     getAllEvents,
     getEventById,
     updateEvent,
     deleteEvent,
+    getHostedEvents,
+    getJoinedEvents,
 };

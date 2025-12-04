@@ -26,6 +26,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const auth_service_1 = require("./auth.service");
 const http_status_1 = __importDefault(require("http-status"));
+const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+};
+const setAuthCookies = (res, accessToken, refreshToken) => {
+    res.cookie('accessToken', accessToken, Object.assign(Object.assign({}, cookieOptions), { maxAge: 15 * 60 * 1000 }));
+    res.cookie('refreshToken', refreshToken, Object.assign(Object.assign({}, cookieOptions), { maxAge: 30 * 24 * 60 * 60 * 1000 }));
+};
 const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const result = yield auth_service_1.AuthService.register(req.body);
@@ -47,15 +56,15 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const result = yield auth_service_1.AuthService.login(req.body);
-        res.cookie('accessToken', result.accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-        });
+        setAuthCookies(res, result.accessToken, result.refreshToken);
         res.status(http_status_1.default.OK).json({
             success: true,
             message: 'User logged in successfully',
-            data: result,
+            data: {
+                accessToken: result.accessToken,
+                refreshToken: result.refreshToken,
+                user: result.user,
+            },
         });
     }
     catch (error) {
@@ -66,7 +75,48 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
     }
 });
+const refresh = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const token = ((_a = req.cookies) === null || _a === void 0 ? void 0 : _a.refreshToken) ||
+            req.headers['x-refresh-token'];
+        if (!token) {
+            return res.status(http_status_1.default.UNAUTHORIZED).json({
+                success: false,
+                message: 'Refresh token missing',
+            });
+        }
+        const result = yield auth_service_1.AuthService.refresh(token);
+        setAuthCookies(res, result.accessToken, result.refreshToken);
+        res.status(http_status_1.default.OK).json({
+            success: true,
+            message: 'Token refreshed',
+            data: {
+                accessToken: result.accessToken,
+                refreshToken: result.refreshToken,
+                user: result.user,
+            },
+        });
+    }
+    catch (error) {
+        res.status(http_status_1.default.UNAUTHORIZED).json({
+            success: false,
+            message: error.message || 'Failed to refresh token',
+            error,
+        });
+    }
+});
+const logout = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    res.clearCookie('accessToken', cookieOptions);
+    res.clearCookie('refreshToken', cookieOptions);
+    res.status(http_status_1.default.OK).json({
+        success: true,
+        message: 'Logged out successfully',
+    });
+});
 exports.AuthController = {
     register,
     login,
+    refresh,
+    logout,
 };

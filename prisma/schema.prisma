@@ -35,6 +35,21 @@ enum PaymentStatus {
   PENDING
   COMPLETED
   FAILED
+  REFUNDED
+}
+
+enum NotificationType {
+  EVENT_UPDATE
+  PAYMENT
+  FRIEND_ACTIVITY
+  GENERAL
+}
+
+enum WithdrawalStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PAID
 }
 
 model Faq {
@@ -50,30 +65,36 @@ model Faq {
 }
 
 model User {
-  id              String        @id @default(uuid())
-  email           String        @unique
-  password        String
-  fullName        String
-  profileImage    String?
-  bio             String?
-  interests       String[]
-  location        String?
-  role            Role          @default(USER)
-  isActive        Boolean       @default(true)
-  averageRating   Float?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  hostedEvents    Event[]       @relation("HostedEvents")
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  fullName      String
+  profileImage  String?
+  bio           String?
+  interests     String[]
+  location      String?
+  role          Role     @default(USER)
+  isActive      Boolean  @default(true)
+  averageRating Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  hostedEvents    Event[]        @relation("HostedEvents")
   participants    Participant[]
-  reviews         Review[]      @relation("ReviewsGiven")
-  receivedReviews Review[]      @relation("ReviewsReceived")
-  
+  reviews         Review[]       @relation("ReviewsGiven")
+  receivedReviews Review[]       @relation("ReviewsReceived")
+  payments        Payment[]      @relation("PaymentUser")
+  hostPayments    Payment[]      @relation("PaymentHost")
+  notifications   Notification[]
+  followers       Friendship[]   @relation("Followers")
+  following       Friendship[]   @relation("Following")
+  withdrawals     Withdrawal[]   @relation("WithdrawalHost")
+
   @@index([email])
 }
 
 model Event {
-  id              String          @id @default(uuid())
+  id              String        @id @default(uuid())
   title           String
   description     String
   category        EventCategory
@@ -81,19 +102,22 @@ model Event {
   time            String
   location        String
   address         String
+  latitude        Float?
+  longitude       Float?
   minParticipants Int
   maxParticipants Int
-  joiningFee      Decimal         @default(0)
+  joiningFee      Decimal       @default(0)
   imageUrl        String?
-  status          EventStatus     @default(OPEN)
+  status          EventStatus   @default(OPEN)
   hostId          String
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  
-  host            User            @relation("HostedEvents", fields: [hostId], references: [id], onDelete: Cascade)
-  participants    Participant[]
-  reviews         Review[]
-  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  host         User          @relation("HostedEvents", fields: [hostId], references: [id], onDelete: Cascade)
+  participants Participant[]
+  reviews      Review[]
+  payments     Payment[]
+
   @@index([hostId])
   @@index([category])
   @@index([status])
@@ -107,13 +131,40 @@ model Participant {
   paymentStatus PaymentStatus @default(PENDING)
   paymentId     String?
   joinedAt      DateTime      @default(now())
-  
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event         Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
   @@unique([userId, eventId])
   @@index([userId])
   @@index([eventId])
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  userId          String
+  eventId         String
+  hostId          String
+  amount          Decimal
+  currency        String        @default("usd")
+  status          PaymentStatus @default(PENDING)
+  paymentIntentId String?
+  receiptUrl      String?
+  description     String?
+  refundId        String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user  User  @relation("PaymentUser", fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  host  User  @relation("PaymentHost", fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@unique([paymentIntentId])
+  @@index([userId])
+  @@index([eventId])
+  @@index([hostId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Review {
@@ -121,15 +172,62 @@ model Review {
   eventId   String
   userId    String
   hostId    String
-  rating    Int      // 1-5
+  rating    Int // 1-5
   comment   String?
   createdAt DateTime @default(now())
-  
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user      User     @relation("ReviewsGiven", fields: [userId], references: [id], onDelete: Cascade)
-  host      User     @relation("ReviewsReceived", fields: [hostId], references: [id], onDelete: Cascade)
-  
+  verified  Boolean  @default(false)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation("ReviewsGiven", fields: [userId], references: [id], onDelete: Cascade)
+  host  User  @relation("ReviewsReceived", fields: [hostId], references: [id], onDelete: Cascade)
+
   @@unique([userId, eventId])
   @@index([hostId])
   @@index([eventId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  title     String
+  body      String
+  type      NotificationType @default(GENERAL)
+  data      Json?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+model Friendship {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model Withdrawal {
+  id          String           @id @default(uuid())
+  hostId      String
+  amount      Decimal
+  status      WithdrawalStatus @default(REQUESTED)
+  note        String?
+  createdAt   DateTime         @default(now())
+  processedAt DateTime?
+
+  host User @relation("WithdrawalHost", fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@index([hostId])
+  @@index([status])
+  @@index([createdAt])
 }

@@ -17,6 +17,8 @@ router.post(
 
 router.get('/', EventController.getAllEvents);
 router.get('/search', EventController.getAllEvents);
+router.get('/hosted/me', authMiddleware, requireRole('HOST', 'ADMIN', 'USER'), EventController.getHostedEvents);
+router.get('/joined/me', authMiddleware, requireRole('HOST', 'ADMIN', 'USER'), EventController.getJoinedEvents);
 router.get('/:id', EventController.getEventById);
 
 router.patch(

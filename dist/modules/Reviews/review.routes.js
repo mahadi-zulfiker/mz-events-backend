@@ -14,4 +14,6 @@ const router = express_1.default.Router();
 router.post('/', auth_middleware_1.authMiddleware, (0, role_middleware_1.requireRole)('USER', 'HOST', 'ADMIN'), (0, validator_middleware_1.validateRequest)(review_validation_1.createReviewSchema), review_controller_1.ReviewController.createReview);
 router.get('/host/:hostId', review_controller_1.ReviewController.getHostReviews);
 router.get('/event/:eventId', review_controller_1.ReviewController.getEventReviews);
+router.put('/:id', auth_middleware_1.authMiddleware, (0, role_middleware_1.requireRole)('USER', 'HOST', 'ADMIN'), review_controller_1.ReviewController.updateReview);
+router.delete('/:id', auth_middleware_1.authMiddleware, (0, role_middleware_1.requireRole)('ADMIN'), review_controller_1.ReviewController.deleteReview);
 exports.ReviewRoutes = router;

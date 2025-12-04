@@ -15,7 +15,7 @@ const authMiddleware = (req, res, next) => {
                 message: 'You are not authorized',
             });
         }
-        const decoded = (0, jwt_util_1.verifyToken)(token);
+        const decoded = (0, jwt_util_1.verifyAccessToken)(token);
         req.user = decoded;
         next();
     }

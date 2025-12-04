@@ -14,6 +14,8 @@ const router = express_1.default.Router();
 router.post('/', auth_middleware_1.authMiddleware, (0, role_middleware_1.requireRole)('HOST', 'ADMIN'), (0, validator_middleware_1.validateRequest)(event_validation_1.createEventSchema), event_controller_1.EventController.createEvent);
 router.get('/', event_controller_1.EventController.getAllEvents);
 router.get('/search', event_controller_1.EventController.getAllEvents);
+router.get('/hosted/me', auth_middleware_1.authMiddleware, (0, role_middleware_1.requireRole)('HOST', 'ADMIN', 'USER'), event_controller_1.EventController.getHostedEvents);
+router.get('/joined/me', auth_middleware_1.authMiddleware, (0, role_middleware_1.requireRole)('HOST', 'ADMIN', 'USER'), event_controller_1.EventController.getJoinedEvents);
 router.get('/:id', event_controller_1.EventController.getEventById);
 router.patch('/:id', auth_middleware_1.authMiddleware, (0, role_middleware_1.requireRole)('HOST', 'ADMIN'), (0, validator_middleware_1.validateRequest)(event_validation_1.updateEventSchema), event_controller_1.EventController.updateEvent);
 router.delete('/:id', auth_middleware_1.authMiddleware, (0, role_middleware_1.requireRole)('HOST', 'ADMIN'), event_controller_1.EventController.deleteEvent);

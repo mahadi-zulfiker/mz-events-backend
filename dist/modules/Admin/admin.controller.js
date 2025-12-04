@@ -47,17 +47,24 @@ const getStats = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 const getUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 20;
         const skip = (page - 1) * limit;
+        const roleQuery = (_a = req.query.role) === null || _a === void 0 ? void 0 : _a.toUpperCase();
+        const allowedRoles = ['USER', 'HOST', 'ADMIN'];
+        const where = roleQuery && allowedRoles.includes(roleQuery)
+            ? { role: roleQuery }
+            : undefined;
         const [users, total] = yield Promise.all([
             database_1.default.user.findMany({
+                where,
                 skip,
                 take: limit,
                 orderBy: { createdAt: 'desc' },
             }),
-            database_1.default.user.count(),
+            database_1.default.user.count({ where }),
         ]);
         res.status(http_status_1.default.OK).json({
             success: true,

@@ -40,9 +40,9 @@ async function main() {
         }),
     ]);
 
-    await prisma.event.createMany({
-        data: [
-            {
+    const createdEvents = await prisma.$transaction([
+        prisma.event.create({
+            data: {
                 title: 'Sunset Hike',
                 description: 'Group hike to enjoy the sunset views.',
                 category: 'TRAVEL',
@@ -50,13 +50,17 @@ async function main() {
                 time: '18:00',
                 location: 'Denver',
                 address: 'Trailhead Rd',
+                latitude: 39.7392,
+                longitude: -104.9903,
                 minParticipants: 2,
                 maxParticipants: 10,
                 joiningFee: new Prisma.Decimal(0),
                 hostId: host.id,
                 status: 'OPEN',
             },
-            {
+        }),
+        prisma.event.create({
+            data: {
                 title: 'Board Game Night',
                 description: 'Bring your favorite board games and snacks.',
                 category: 'GAMING',
@@ -64,11 +68,47 @@ async function main() {
                 time: '19:30',
                 location: 'Chicago',
                 address: '123 Game St',
+                latitude: 41.8781,
+                longitude: -87.6298,
                 minParticipants: 2,
                 maxParticipants: 8,
                 joiningFee: new Prisma.Decimal(10),
                 hostId: host.id,
                 status: 'OPEN',
+            },
+        }),
+    ]);
+
+    const hike = createdEvents[0];
+    const games = createdEvents[1];
+
+    await prisma.participant.createMany({
+        data: [
+            { userId: user.id, eventId: hike.id, paymentStatus: 'COMPLETED' },
+            { userId: user.id, eventId: games.id, paymentStatus: 'COMPLETED', paymentId: 'pi_seed_1' },
+        ],
+    });
+
+    await prisma.payment.createMany({
+        data: [
+            {
+                userId: user.id,
+                hostId: host.id,
+                eventId: games.id,
+                amount: new Prisma.Decimal(10),
+                status: 'COMPLETED',
+                paymentIntentId: 'pi_seed_1',
+                description: 'Board Game Night ticket',
+            },
+            {
+                userId: user.id,
+                hostId: host.id,
+                eventId: games.id,
+                amount: new Prisma.Decimal(10),
+                status: 'REFUNDED',
+                paymentIntentId: 'pi_seed_2',
+                description: 'Refunded ticket example',
+                refundId: 're_seed_1',
             },
         ],
     });
@@ -91,6 +131,36 @@ async function main() {
                 category: 'Policies',
             },
         ],
+    });
+
+    await prisma.friendship.create({
+        data: { followerId: user.id, followingId: host.id },
+    });
+
+    await prisma.notification.createMany({
+        data: [
+            {
+                userId: user.id,
+                title: 'Payment received',
+                body: 'Your Board Game Night ticket is confirmed.',
+                type: 'PAYMENT',
+            },
+            {
+                userId: host.id,
+                title: 'New attendee joined',
+                body: `${user.fullName} joined Board Game Night`,
+                type: 'EVENT_UPDATE',
+            },
+        ],
+    });
+
+    await prisma.withdrawal.create({
+        data: {
+            hostId: host.id,
+            amount: new Prisma.Decimal(50),
+            status: 'REQUESTED',
+            note: 'Weekly payout',
+        },
     });
 
     console.log('Seeding complete', { admin: admin.email, host: host.email, user: user.email });

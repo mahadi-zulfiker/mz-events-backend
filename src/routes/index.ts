@@ -7,6 +7,8 @@ import { ReviewRoutes } from '../modules/Reviews/review.routes';
 import { PaymentRoutes } from '../modules/Payments/payment.routes';
 import { AdminRoutes } from '../modules/Admin/admin.routes';
 import { FaqRoutes } from '../modules/Faq/faq.routes';
+import { NotificationRoutes } from '../modules/Notifications/notification.routes';
+import { FriendRoutes } from '../modules/Friends/friend.routes';
 
 const router = Router();
 
@@ -19,6 +21,8 @@ const moduleRoutes = [
     { path: '/payments', route: PaymentRoutes },
     { path: '/admin', route: AdminRoutes },
     { path: '/faqs', route: FaqRoutes },
+    { path: '/notifications', route: NotificationRoutes },
+    { path: '/friends', route: FriendRoutes },
 ];
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route));

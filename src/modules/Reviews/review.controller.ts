@@ -72,6 +72,7 @@ const createReview = async (req: Request, res: Response) => {
                 hostId,
                 rating: Number(rating),
                 comment,
+                verified: attended,
             },
             include: {
                 user: {
@@ -170,8 +171,81 @@ const getEventReviews = async (req: Request, res: Response) => {
     }
 };
 
+const updateReview = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user?.userId;
+        const role = req.user?.role;
+        const { rating, comment } = req.body;
+
+        const existing = await prisma.review.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(httpStatus.NOT_FOUND).json({
+                success: false,
+                message: 'Review not found',
+            });
+        }
+
+        if (existing.userId !== userId && role !== 'ADMIN') {
+            return res.status(httpStatus.FORBIDDEN).json({
+                success: false,
+                message: 'You cannot edit this review',
+            });
+        }
+
+        const updated = await prisma.review.update({
+            where: { id },
+            data: {
+                rating: rating ? Number(rating) : undefined,
+                comment: comment ?? undefined,
+            },
+        });
+
+        res.status(httpStatus.OK).json({
+            success: true,
+            message: 'Review updated',
+            data: updated,
+        });
+    } catch (error: any) {
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message || 'Failed to update review',
+            error,
+        });
+    }
+};
+
+const deleteReview = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const role = req.user?.role;
+
+        if (role !== 'ADMIN') {
+            return res.status(httpStatus.FORBIDDEN).json({
+                success: false,
+                message: 'Only admin can delete reviews',
+            });
+        }
+
+        await prisma.review.delete({ where: { id } });
+
+        res.status(httpStatus.OK).json({
+            success: true,
+            message: 'Review deleted',
+        });
+    } catch (error: any) {
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message || 'Failed to delete review',
+            error,
+        });
+    }
+};
+
 export const ReviewController = {
     createReview,
     getHostReviews,
     getEventReviews,
+    updateReview,
+    deleteReview,
 };

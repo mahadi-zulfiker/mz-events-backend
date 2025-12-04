@@ -19,6 +19,8 @@ const baseEventSchema = {
     time: zod_1.z.string(),
     location: zod_1.z.string().min(2),
     address: zod_1.z.string().min(5),
+    latitude: zod_1.z.number().optional(),
+    longitude: zod_1.z.number().optional(),
     minParticipants: zod_1.z.number().int().positive(),
     maxParticipants: zod_1.z.number().int().positive(),
     joiningFee: zod_1.z.number().nonnegative().optional(),

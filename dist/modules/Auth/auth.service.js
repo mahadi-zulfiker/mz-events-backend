@@ -34,6 +34,24 @@ const register = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     });
     return result;
 });
+const buildUser = (user) => ({
+    id: user.id,
+    fullName: user.fullName,
+    email: user.email,
+    role: user.role,
+    profileImage: user.profileImage,
+});
+const createTokens = (user) => {
+    const payload = {
+        userId: user.id,
+        role: user.role,
+        email: user.email,
+    };
+    return {
+        accessToken: (0, jwt_util_1.signAccessToken)(payload),
+        refreshToken: (0, jwt_util_1.signRefreshToken)(payload),
+    };
+};
 const login = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield database_1.default.user.findUnique({
         where: { email: payload.email },
@@ -45,22 +63,22 @@ const login = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     if (!isPasswordMatched) {
         throw new Error('Password does not match');
     }
-    const accessToken = (0, jwt_util_1.signToken)({
-        userId: user.id,
-        role: user.role,
-        email: user.email,
+    const tokens = createTokens(user);
+    return Object.assign(Object.assign({}, tokens), { user: buildUser(user) });
+});
+const refresh = (token) => __awaiter(void 0, void 0, void 0, function* () {
+    const decoded = (0, jwt_util_1.verifyRefreshToken)(token);
+    const user = yield database_1.default.user.findUnique({
+        where: { id: decoded.userId },
     });
-    return {
-        accessToken,
-        user: {
-            id: user.id,
-            fullName: user.fullName,
-            email: user.email,
-            role: user.role,
-        },
-    };
+    if (!user) {
+        throw new Error('User not found');
+    }
+    const tokens = createTokens(user);
+    return Object.assign(Object.assign({}, tokens), { user: buildUser(user) });
 });
 exports.AuthService = {
     register,
     login,
+    refresh,
 };

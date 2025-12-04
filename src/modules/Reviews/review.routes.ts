@@ -16,5 +16,7 @@ router.post(
 );
 router.get('/host/:hostId', ReviewController.getHostReviews);
 router.get('/event/:eventId', ReviewController.getEventReviews);
+router.put('/:id', authMiddleware, requireRole('USER', 'HOST', 'ADMIN'), ReviewController.updateReview);
+router.delete('/:id', authMiddleware, requireRole('ADMIN'), ReviewController.deleteReview);
 
 export const ReviewRoutes = router;

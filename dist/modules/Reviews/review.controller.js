@@ -36,6 +36,12 @@ const createReview = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 message: 'Event not found',
             });
         }
+        if (event.hostId !== hostId) {
+            return res.status(http_status_1.default.BAD_REQUEST).json({
+                success: false,
+                message: 'Review host mismatch with event',
+            });
+        }
         if (event.status !== 'COMPLETED') {
             return res.status(http_status_1.default.BAD_REQUEST).json({
                 success: false,
@@ -70,6 +76,7 @@ const createReview = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 hostId,
                 rating: Number(rating),
                 comment,
+                verified: attended,
             },
             include: {
                 user: {
@@ -160,8 +167,76 @@ const getEventReviews = (req, res) => __awaiter(void 0, void 0, void 0, function
         });
     }
 });
+const updateReview = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    try {
+        const { id } = req.params;
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        const role = (_b = req.user) === null || _b === void 0 ? void 0 : _b.role;
+        const { rating, comment } = req.body;
+        const existing = yield database_1.default.review.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(http_status_1.default.NOT_FOUND).json({
+                success: false,
+                message: 'Review not found',
+            });
+        }
+        if (existing.userId !== userId && role !== 'ADMIN') {
+            return res.status(http_status_1.default.FORBIDDEN).json({
+                success: false,
+                message: 'You cannot edit this review',
+            });
+        }
+        const updated = yield database_1.default.review.update({
+            where: { id },
+            data: {
+                rating: rating ? Number(rating) : undefined,
+                comment: comment !== null && comment !== void 0 ? comment : undefined,
+            },
+        });
+        res.status(http_status_1.default.OK).json({
+            success: true,
+            message: 'Review updated',
+            data: updated,
+        });
+    }
+    catch (error) {
+        res.status(http_status_1.default.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message || 'Failed to update review',
+            error,
+        });
+    }
+});
+const deleteReview = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const { id } = req.params;
+        const role = (_a = req.user) === null || _a === void 0 ? void 0 : _a.role;
+        if (role !== 'ADMIN') {
+            return res.status(http_status_1.default.FORBIDDEN).json({
+                success: false,
+                message: 'Only admin can delete reviews',
+            });
+        }
+        yield database_1.default.review.delete({ where: { id } });
+        res.status(http_status_1.default.OK).json({
+            success: true,
+            message: 'Review deleted',
+        });
+    }
+    catch (error) {
+        res.status(http_status_1.default.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message || 'Failed to delete review',
+            error,
+        });
+    }
+});
 exports.ReviewController = {
     createReview,
     getHostReviews,
     getEventReviews,
+    updateReview,
+    deleteReview,
 };

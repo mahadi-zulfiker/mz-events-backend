@@ -128,6 +128,9 @@ const getUserEvents = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 where: { hostId: id },
                 orderBy: { date: 'asc' },
                 include: {
+                    participants: {
+                        select: { paymentStatus: true },
+                    },
                     _count: { select: { participants: true } },
                 },
             }),

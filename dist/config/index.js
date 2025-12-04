@@ -13,8 +13,15 @@ exports.default = {
         secret: process.env.JWT_SECRET || 'change-me',
         expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     },
+    refreshJwt: {
+        secret: process.env.JWT_REFRESH_SECRET ||
+            process.env.JWT_SECRET ||
+            'change-me',
+        expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
+    },
     bcryptSaltRounds: Number(process.env.BCRYPT_SALT_ROUNDS || 10),
-    corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    corsOrigin: process.env.CORS_ORIGIN ||
+        'http://localhost:3000,http://127.0.0.1:3000',
     cloudinary: {
         cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
         apiKey: process.env.CLOUDINARY_API_KEY || '',

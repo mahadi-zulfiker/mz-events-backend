@@ -8,6 +8,9 @@ const participant_routes_1 = require("../modules/Participants/participant.routes
 const review_routes_1 = require("../modules/Reviews/review.routes");
 const payment_routes_1 = require("../modules/Payments/payment.routes");
 const admin_routes_1 = require("../modules/Admin/admin.routes");
+const faq_routes_1 = require("../modules/Faq/faq.routes");
+const notification_routes_1 = require("../modules/Notifications/notification.routes");
+const friend_routes_1 = require("../modules/Friends/friend.routes");
 const router = (0, express_1.Router)();
 const moduleRoutes = [
     { path: '/auth', route: auth_routes_1.AuthRoutes },
@@ -17,6 +20,9 @@ const moduleRoutes = [
     { path: '/reviews', route: review_routes_1.ReviewRoutes },
     { path: '/payments', route: payment_routes_1.PaymentRoutes },
     { path: '/admin', route: admin_routes_1.AdminRoutes },
+    { path: '/faqs', route: faq_routes_1.FaqRoutes },
+    { path: '/notifications', route: notification_routes_1.NotificationRoutes },
+    { path: '/friends', route: friend_routes_1.FriendRoutes },
 ];
 moduleRoutes.forEach((route) => router.use(route.path, route.route));
 exports.default = router;
