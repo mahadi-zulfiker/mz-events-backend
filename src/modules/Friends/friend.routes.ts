@@ -10,5 +10,6 @@ router.post('/follow/:userId', FriendController.follow);
 router.delete('/unfollow/:userId', FriendController.unfollow);
 router.get('/list', FriendController.list);
 router.get('/activities', FriendController.activities);
+router.get('/status/:userId', FriendController.checkStatus);
 
 export const FriendRoutes = router;

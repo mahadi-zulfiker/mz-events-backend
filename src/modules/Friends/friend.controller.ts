@@ -185,9 +185,45 @@ const activities = async (req: Request, res: Response) => {
     }
 };
 
+const checkStatus = async (req: Request, res: Response) => {
+    try {
+        const followerId = req.user?.userId;
+        const { userId: followingId } = req.params;
+
+        if (!followerId) {
+            return res.status(httpStatus.OK).json({
+                success: true,
+                data: { isFollowing: false },
+            });
+        }
+
+        const friendship = await prisma.friendship.findUnique({
+            where: {
+                followerId_followingId: {
+                    followerId,
+                    followingId,
+                },
+            },
+        });
+
+        res.status(httpStatus.OK).json({
+            success: true,
+            data: { isFollowing: !!friendship },
+        });
+    } catch (error: any) {
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: error.message || 'Failed to check follow status',
+            error,
+        });
+    }
+};
+
+
 export const FriendController = {
     follow,
     unfollow,
     list,
     activities,
+    checkStatus,
 };
