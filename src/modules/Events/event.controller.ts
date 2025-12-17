@@ -26,7 +26,14 @@ const buildFilters = (query: Record<string, any>) => {
     }
 
     if (query.date) {
-        where.date = new Date(query.date as string);
+        const startOfDay = new Date(query.date as string);
+        const endOfDay = new Date(query.date as string);
+        endOfDay.setDate(endOfDay.getDate() + 1);
+
+        where.date = {
+            gte: startOfDay,
+            lt: endOfDay,
+        };
     }
 
     if (query.startDate || query.endDate) {

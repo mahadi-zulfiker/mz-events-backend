@@ -21,6 +21,14 @@ const follow = async (req: Request, res: Response) => {
             });
         }
 
+        const follower = await prisma.user.findUnique({ where: { id: followerId } });
+        if (!follower) {
+            return res.status(httpStatus.UNAUTHORIZED).json({
+                success: false,
+                message: 'Invalid session. Please login again.',
+            });
+        }
+
         const target = await prisma.user.findUnique({ where: { id: followingId } });
         if (!target) {
             return res.status(httpStatus.NOT_FOUND).json({
